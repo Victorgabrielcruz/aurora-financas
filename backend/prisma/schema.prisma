@@ -1,0 +1,222 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+model Tenant {
+  id String @id @default(cuid())
+  name String
+  createdAt DateTime @default(now())
+  users User[]
+  accounts Account[]
+  categories Category[]
+  cards CreditCard[]
+  investments Investment[]
+}
+model User {
+  id String @id @default(cuid())
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId],references:[id],onDelete:NoAction)
+  name String
+  email String @unique
+  passwordHash String
+  theme String @default("light")
+  createdAt DateTime @default(now())
+  sessions Session[]
+  accounts Account[]
+  categories Category[]
+  cards CreditCard[]
+  investments Investment[]
+  @@index([tenantId])
+}
+model Session {
+  id String @id
+  userId String
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  expiresAt DateTime
+}
+model Account {
+  id String @id @default(cuid())
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId],references:[id],onDelete:NoAction)
+  userId String
+  user User @relation(fields:[userId],references:[id],onDelete:NoAction)
+  name String
+  institution String
+  type String
+  initialBalance Int
+  referenceDate String
+  color String @default("#0e8063")
+  icon String @default("wallet")
+  demo Boolean @default(false)
+  active Boolean @default(true)
+  transactions Transaction[]
+  creditCards CreditCard[]
+  @@index([userId])
+  @@index([tenantId])
+}
+model Category {
+  id String @id @default(cuid())
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId],references:[id],onDelete:NoAction)
+  userId String
+  user User @relation(fields:[userId],references:[id],onDelete:NoAction)
+  name String
+  type String
+  color String
+  icon String @default("tag")
+  parentId String?
+  parent Category? @relation("Subcategories",fields:[parentId],references:[id],onDelete:NoAction)
+  children Category[] @relation("Subcategories")
+  transactions Transaction[]
+  purchases CardPurchase[]
+  budgets CategoryBudget[]
+  @@index([userId])
+  @@index([tenantId])
+}
+model CategoryBudget {
+  id String @id @default(cuid())
+  categoryId String
+  category Category @relation(fields:[categoryId],references:[id],onDelete:Cascade)
+  month String
+  amount Int
+  @@unique([categoryId,month])
+}
+model Transaction {
+  id String @id @default(cuid())
+  accountId String
+  account Account @relation(fields:[accountId],references:[id],onDelete:NoAction)
+  categoryId String?
+  category Category? @relation(fields:[categoryId],references:[id],onDelete:NoAction)
+  description String
+  items Json @default("[]")
+  amount Int
+  type String
+  date String
+  status String @default("CONFIRMED")
+  note String @default("")
+  fixed Boolean @default(false)
+  recurrence String?
+  recurrenceKey String? @unique
+  groupId String?
+  createdAt DateTime @default(now())
+  invoicePayment InvoicePayment?
+  investmentOperation InvestmentOperation?
+  @@index([accountId,date])
+  @@index([categoryId,date])
+}
+model CreditCard {
+  id String @id @default(cuid())
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId],references:[id],onDelete:NoAction)
+  userId String
+  user User @relation(fields:[userId],references:[id],onDelete:NoAction)
+  accountId String?
+  account Account? @relation(fields:[accountId],references:[id],onDelete:NoAction)
+  name String
+  institution String
+  brand String
+  lastFour String @default("")
+  limit Int
+  closingDay Int
+  dueDay Int
+  color String
+  demo Boolean @default(false)
+  active Boolean @default(true)
+  invoices CreditCardInvoice[]
+  purchases CardPurchase[]
+  @@index([userId])
+  @@index([tenantId])
+  @@index([accountId])
+}
+model CardPurchase {
+  id String @id @default(cuid())
+  cardId String
+  card CreditCard @relation(fields:[cardId],references:[id],onDelete:NoAction)
+  categoryId String
+  category Category @relation(fields:[categoryId],references:[id],onDelete:NoAction)
+  description String
+  items Json @default("[]")
+  amount Int
+  date String
+  fixed Boolean @default(false)
+  installments CardInstallment[]
+  @@index([cardId,date])
+}
+model CardInstallment {
+  id String @id @default(cuid())
+  purchaseId String
+  purchase CardPurchase @relation(fields:[purchaseId],references:[id],onDelete:Cascade)
+  invoiceId String
+  invoice CreditCardInvoice @relation(fields:[invoiceId],references:[id],onDelete:NoAction)
+  number Int
+  amount Int
+  @@unique([purchaseId,number])
+}
+model CreditCardInvoice {
+  id String @id @default(cuid())
+  cardId String
+  card CreditCard @relation(fields:[cardId],references:[id],onDelete:NoAction)
+  month String
+  closingDate String
+  dueDate String
+  installments CardInstallment[]
+  payments InvoicePayment[]
+  @@unique([cardId,month])
+}
+model InvoicePayment {
+  id String @id @default(cuid())
+  invoiceId String
+  invoice CreditCardInvoice @relation(fields:[invoiceId],references:[id],onDelete:NoAction)
+  transactionId String @unique
+  transaction Transaction @relation(fields:[transactionId],references:[id],onDelete:NoAction)
+  amount Int
+  date String
+}
+model Investment {
+  id String @id @default(cuid())
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId],references:[id],onDelete:NoAction)
+  userId String
+  user User @relation(fields:[userId],references:[id],onDelete:NoAction)
+  name String
+  class String
+  institution String
+  quantity Float?
+  note String @default("")
+  demo Boolean @default(false)
+  active Boolean @default(true)
+  operations InvestmentOperation[]
+  valuations InvestmentValuation[]
+  @@index([userId])
+  @@index([tenantId])
+}
+model InvestmentOperation {
+  id String @id @default(cuid())
+  investmentId String
+  investment Investment @relation(fields:[investmentId],references:[id],onDelete:NoAction)
+  transactionId String? @unique
+  transaction Transaction? @relation(fields:[transactionId],references:[id],onDelete:NoAction)
+  type String
+  amount Int
+  costBasis Int
+  position Int
+  date String
+  createdAt DateTime @default(now())
+  @@index([investmentId,date])
+  @@unique([investmentId,position])
+}
+model InvestmentValuation {
+  id String @id @default(cuid())
+  investmentId String
+  investment Investment @relation(fields:[investmentId],references:[id],onDelete:NoAction)
+  amount Int
+  operationCount Int @default(0)
+  date String
+  createdAt DateTime @default(now())
+  @@index([investmentId,date])
+}
+

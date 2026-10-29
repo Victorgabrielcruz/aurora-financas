@@ -1,0 +1,15 @@
+node_modules/
+**/dist/
+.env
+*.db
+*.db-*
+*.log
+*.tsbuildinfo
+.env.*
+!.env.example
+*.db-journal
+coverage/
+.DS_Store
+.neon
+backend/generated/
+.vercel/

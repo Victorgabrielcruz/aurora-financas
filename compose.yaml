@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    image: aurora-financas:local
+    env_file:
+      - .env.local
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      HOST: 0.0.0.0
+      PORT: 3001
+      RUN_MIGRATIONS: "true"
+    ports:
+      - "${APP_PORT:-3001}:3001"
+    restart: unless-stopped
+    stop_grace_period: 30s

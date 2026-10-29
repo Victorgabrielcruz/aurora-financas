@@ -1,0 +1,52 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {testDatabase} from '../scripts/test-database.mjs';
+const cleanup=await testDatabase();
+const {createApp}=await import('./app.js');const {db}=await import('./db.js');const {today,addMonths}=await import('./finance.js');
+
+test('Cartão com conta opcional e compras na lista de transações',async()=>{
+ const app=await createApp();let cookie='';
+ const raw=(method:string,path:string,payload?:any)=>app.inject({method:method as any,url:'/api'+path,payload,headers:cookie?{cookie}:{}});
+ const api=async(method:string,path:string,payload?:any)=>{const r=await raw(method,path,payload);assert.ok(r.statusCode<400,`${method} ${path}: ${r.body}`);return r.json().data;};
+ try{
+  const r=await raw('POST','/auth/register',{name:'Vínculo',email:'vinculo@teste.local',password:'senha-vinculo-teste-123'});assert.equal(r.statusCode,201);cookie=(r.headers['set-cookie'] as string).split(';')[0];
+  const date=today(),month=date.slice(0,7),category=(await api('GET','/categories')).find((c:any)=>c.type==='EXPENSE');
+  const account=await api('POST','/accounts',{name:'Conta principal',institution:'Banco',type:'CHECKING',initialBalance:200000,referenceDate:addMonths(date,-12)});
+  const other=await api('POST','/accounts',{name:'Outra conta',institution:'Banco',type:'CHECKING',initialBalance:100000,referenceDate:date});
+  const input={name:'Meu cartão',institution:'Banco',brand:'Visa',limit:100000,closingDay:25,dueDay:5};
+  const unlinked=await api('POST','/cards',input);assert.equal(unlinked.accountId,null);
+  const card=await api('POST','/cards',{...input,accountId:account.id});assert.equal(card.accountId,account.id);
+  let details=await api('GET','/cards/'+card.id);assert.equal(details.account.name,account.name);
+  await api('PATCH','/cards/'+card.id,{accountId:other.id});
+  assert.equal((await api('GET','/cards/'+card.id)).accountId,other.id);
+  await api('PATCH','/cards/'+card.id,{name:'Nome novo'});assert.equal((await api('GET','/cards/'+card.id)).accountId,other.id);
+  await api('PATCH','/cards/'+card.id,{accountId:null});assert.equal((await api('GET','/cards/'+card.id)).account,null);
+  await api('PATCH','/cards/'+card.id,{accountId:account.id});
+  await api('POST','/transactions',{accountId:account.id,categoryId:category.id,description:'Dinheiro',amount:1000,type:'EXPENSE',date,status:'CONFIRMED'});
+  const before=await api('GET','/dashboard?month='+month);
+  const purchase=await api('POST',`/cards/${card.id}/purchases`,{description:'Compra no cartão',amount:10000,date,categoryId:category.id,installments:2});
+  const after=await api('GET','/dashboard?month='+month);
+  assert.equal(after.available,before.available);assert.equal(after.expense,before.expense+10000);assert.equal(after.owed,before.owed+10000);
+  const rows=await api('GET','/transactions');assert.equal(rows.length,2);
+  const row=rows.find((x:any)=>x.id===purchase.id);assert.equal(row.type,'CREDIT_CARD');assert.equal(row.account.name,'Nome novo');assert.equal(row.totalInstallments,2);assert.equal(row.cardId,card.id);
+  assert.equal((await api('GET','/transactions?type=CREDIT_CARD')).length,1);
+  assert.equal((await api('GET','/transactions?type=EXPENSE')).length,1);
+  assert.equal((await api('GET','/transactions?accountId='+account.id)).length,1);
+  assert.equal((await api('GET','/transactions?type=CREDIT_CARD&status=PLANNED')).length,0);
+  assert.equal((await api('GET','/transactions?search=Compra%20no%20cart%C3%A3o')).length,1);
+  assert.equal((await api('GET','/transactions?type=CREDIT_CARD&min=10001')).length,0);
+  const page1=await raw('GET','/transactions?limit=1&page=1'),page2=await raw('GET','/transactions?limit=1&page=2');
+  assert.equal(page1.json().meta.total,2);assert.notEqual(page1.json().data[0].id,page2.json().data[0].id);
+  details=await api('GET','/cards/'+card.id);const invoice=await api('GET','/invoices/'+details.invoices[0].id);
+  assert.equal(invoice.card.accountId,account.id);assert.equal(invoice.card.account.active,true);
+  await api('POST',`/invoices/${invoice.id}/payments`,{accountId:other.id,amount:1000,date});
+  const balances=await api('GET','/accounts');assert.equal(balances.find((a:any)=>a.id===other.id).balance,99000);assert.equal(balances.find((a:any)=>a.id===account.id).balance,199000);
+  await api('DELETE','/accounts/'+account.id);
+  assert.equal((await raw('POST','/cards',{...input,accountId:account.id})).statusCode,400);
+  assert.equal((await raw('PATCH','/cards/'+unlinked.id,{accountId:account.id})).statusCode,400);
+  await api('PATCH','/cards/'+card.id,{name:'Conta arquivada preservada'});
+  assert.equal((await api('GET','/invoices/'+invoice.id)).card.account.active,false);
+  await api('PATCH','/cards/'+card.id,{accountId:null});
+  assert.equal((await api('GET','/cards/'+card.id)).account,null);
+ }finally{await app.close();await db.$disconnect();await cleanup();}
+});

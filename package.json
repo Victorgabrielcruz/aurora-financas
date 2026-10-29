@@ -1,0 +1,30 @@
+{
+  "name": "aurora-financas",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n API,WEB -c green,blue \"npm run dev -w backend\" \"npm run dev -w frontend\"",
+    "setup": "npm run db:generate && npm run db:migrate",
+    "db:generate": "npm run db:generate -w backend",
+    "db:migrate": "npm run db:migrate -w backend",
+    "build": "npm run build -w backend && npm run build -w frontend",
+    "start": "npm run start -w backend",
+    "test": "npm run test -w backend",
+    "test:neon": "node backend/scripts/smoke-neon.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@neon/config": "^1.9.5",
+    "@neon/env": "^1.6.6"
+  }
+}
