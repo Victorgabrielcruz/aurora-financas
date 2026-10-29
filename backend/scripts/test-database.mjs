@@ -25,14 +25,14 @@ export async function testDatabase(){
   await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
   try{
     // Prisma's migration lock is shared across schemas; parallel test files may queue here.
-    for(let attempt=0;attempt<4;attempt++){
+    for(let attempt=0;attempt<6;attempt++){
       try{
         execFileSync(process.execPath,[fileURLToPath(new URL('../../node_modules/prisma/build/index.js',import.meta.url)),'migrate','deploy'],{
           cwd:fileURLToPath(new URL('../',import.meta.url)),env:process.env,stdio:'pipe',
         });
         break;
       }catch(error){
-        if(attempt===3||!String(error.stderr??'').includes('pg_advisory_lock'))throw error;
+        if(attempt===5||!String(error.stderr??'').includes('pg_advisory_lock'))throw error;
       }
     }
   }catch(error){await admin.$executeRawUnsafe(`DROP SCHEMA "${schema}" CASCADE`);await admin.$disconnect();throw error;}

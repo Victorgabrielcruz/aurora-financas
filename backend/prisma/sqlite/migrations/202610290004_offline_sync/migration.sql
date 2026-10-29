@@ -1,0 +1,9 @@
+CREATE TABLE "SyncReceipt" (
+ "id" TEXT NOT NULL PRIMARY KEY,
+ "tenantId" TEXT NOT NULL REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+ "userId" TEXT NOT NULL REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+ "fingerprint" TEXT NOT NULL,
+ "response" JSONB NOT NULL,
+ "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX "SyncReceipt_tenantId_userId_idx" ON "SyncReceipt"("tenantId","userId");

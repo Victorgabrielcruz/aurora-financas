@@ -197,3 +197,18 @@ Cada suíte cria e remove um schema aleatório nessa branch. Os testes rejeitam 
 
 `npm run test:neon` exige o app iniciado em `http://127.0.0.1:3001` (ou `SMOKE_URL`). Testa o frontend compilado por HTTP, saúde com consulta real, cadastro, sessão, despesa, saldo, leitura direta no Neon, persistência após reconexão, login, dashboard e exportação. Cria um tenant temporário e remove somente seus registros ao terminar.
 
+
+
+## Modo offline
+
+Após um login com conexão, o Aurora prepara uma cópia local dos dados em IndexedDB, separada por usuário e espaço financeiro. Nenhuma senha ou token de sessão é gravado nesse banco local. O acesso local acompanha o prazo da sessão informado pelo servidor e é bloqueado ao sair. As pendências permanecem vinculadas ao mesmo usuário para uma próxima entrada.
+
+Em Configurações → Usar sem internet, use **Atualizar dados offline** antes de depender do acesso sem rede. Os arquivos de todas as telas são preparados pelo service worker; a API nunca é guardada em Cache Storage. Os dados de consulta e as pendências usam IndexedDB. O armazenamento continua sujeito à limpeza dos dados do navegador; o botão **Exportar pendências** cria uma cópia das operações que ainda não chegaram ao servidor.
+
+A primeira etapa permite consultar os dados preparados e cadastrar despesas de conta e compras no cartão, incluindo composição e parcelamento. As despesas pendentes aparecem separadas em Transações e Configurações. Os saldos e relatórios são a última versão confirmada pelo servidor; as pendências não são misturadas a esses totais. Edições, exclusões, transferências, pagamentos e investimentos exigem conexão nesta etapa.
+
+Com o app aberto, a fila é retomada na reconexão, ao voltar à janela e a cada 30 segundos. Também há sincronização na próxima abertura com acesso ao servidor. Cada despesa recebe um UUID usado em `X-Idempotency-Key`; a criação financeira e o recibo são gravados na mesma transação PostgreSQL. Repetir uma operação já aceita devolve a resposta anterior, sem criar outra despesa. Operações rejeitadas por regras de negócio ficam visíveis para revisão, nova tentativa ou descarte explícito. A identidade da sessão é validada novamente antes de enviar a fila, e abas diferentes coordenam os envios com Web Locks quando disponíveis.
+
+O modo offline funciona no `localhost` deste computador depois da preparação, mesmo com o servidor local parado. Para sincronizar entre aparelhos, publique o mesmo backend em HTTPS conforme `DEPLOY.md`: o endereço local de um computador não é um endereço público. Cada origem mantém seu próprio banco local; mudar de domínio não transfere as pendências automaticamente.
+
+Testes do cliente offline: `npm run test -w frontend`. O teste usa fake-indexeddb para validar persistência, reabertura, expiração, isolamento, conflitos e resposta perdida após gravação. A suíte do backend também verifica idempotência e envios concorrentes em um schema isolado da branch Neon de testes.

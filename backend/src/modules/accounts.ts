@@ -4,6 +4,7 @@ import {z} from 'zod';
 import {db} from '../db.js';
 import {accountSchema,transactionSchema,categorySchema,money,date,month,nonnegative,fail,compositionSchema} from '../validation.js';
 import {validateItems,readItems} from '../expense-items.js';
+import {idempotentWrite} from '../idempotency.js';
 import {balance,today,addMonths} from '../finance.js';
 export async function ownAccount(tenantId:string,id:string,client:any=db){const a=await client.account.findFirst({where:{id,tenantId},include:{transactions:true}});if(!a)fail('Conta não encontrada.',404);return a;}
 export async function ownCategory(tenantId:string,id:string,type?:string,client:any=db){const c=await client.category.findFirst({where:{id,tenantId}});if(!c)fail('Categoria não encontrada.',404);if(type&&c.type!==type)fail('Categoria incompatível com o lançamento.');return c;}
@@ -34,7 +35,7 @@ export async function accountRoutes(app:FastifyInstance){
   const data=[...transactions,...cardRows].sort((a,b)=>b.date.localeCompare(a.date)||new Date('createdAt' in b?b.createdAt:0).getTime()-new Date('createdAt' in a?a.createdAt:0).getTime()||b.id.localeCompare(a.id)).slice((q.page-1)*q.limit,take);
   return {data,meta:{page:q.page,limit:q.limit,total:totalTransactions+totalPurchases}};
  });
- app.post('/api/transactions',async(req,reply)=>{const input=transactionSchema.parse(req.body);validateItems(input.items,input.amount,input.type);const a=await ownAccount(req.tenantId,input.accountId);if(!a.active||input.date<a.referenceDate)fail('Escolha uma conta ativa e uma data posterior ao saldo inicial.');if(input.status==='CONFIRMED'&&input.date>today())fail('Lançamentos futuros devem ser previstos.');await ownCategory(req.tenantId,input.categoryId,input.type);reply.code(201);return {data:await db.transaction.create({data:input})};});
+ app.post('/api/transactions',async(req,reply)=>{const input=transactionSchema.parse(req.body);validateItems(input.items,input.amount,input.type);reply.code(201);return idempotentWrite(req,async tx=>{const a=await ownAccount(req.tenantId,input.accountId,tx);if(!a.active||input.date<a.referenceDate)fail('Escolha uma conta ativa e uma data posterior ao saldo inicial.');if(input.status==='CONFIRMED'&&input.date>today())fail('Lançamentos futuros devem ser previstos.');await ownCategory(req.tenantId,input.categoryId,input.type,tx);return {data:await tx.transaction.create({data:input})};});});
  app.patch('/api/transactions/:id',async(req)=>{const {id}=req.params as any;const t=await db.transaction.findFirst({where:{id,account:{tenantId:req.tenantId}}});if(!t)fail('Lançamento não encontrado.',404);if(!['INCOME','EXPENSE'].includes(t.type))fail('Esta movimentação faz parte do histórico financeiro e não pode ser alterada.');const input=transactionSchema.partial().parse(req.body);const merged={...t,...input};validateItems(merged.items,merged.amount,merged.type);const a=await ownAccount(req.tenantId,merged.accountId);await ownCategory(req.tenantId,merged.categoryId!,merged.type);if(merged.date<a.referenceDate||merged.status==='CONFIRMED'&&merged.date>today())fail('Data inválida para este lançamento.');return {data:await db.transaction.update({where:{id},data:input})};});
  app.patch('/api/transactions/:id/items',async(req)=>{
   const {id}=req.params as any;const input=compositionSchema.parse(req.body);

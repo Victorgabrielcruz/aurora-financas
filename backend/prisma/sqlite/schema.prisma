@@ -16,6 +16,7 @@ model Tenant {
   categories Category[]
   cards CreditCard[]
   investments Investment[]
+  syncReceipts SyncReceipt[]
 }
 model User {
   id String @id @default(cuid())
@@ -31,6 +32,7 @@ model User {
   categories Category[]
   cards CreditCard[]
   investments Investment[]
+  syncReceipts SyncReceipt[]
   @@index([tenantId])
 }
 model Session {
@@ -221,3 +223,15 @@ model InvestmentValuation {
   @@index([investmentId,date])
 }
 
+
+model SyncReceipt {
+  id String @id
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId],references:[id],onDelete:Cascade)
+  userId String
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  fingerprint String
+  response Json
+  createdAt DateTime @default(now())
+  @@index([tenantId,userId])
+}
