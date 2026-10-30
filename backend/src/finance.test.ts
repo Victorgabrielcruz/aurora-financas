@@ -1,6 +1,23 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {balance,splitInstallments,invoiceDates,invoiceSummary,investmentSummary,addMonths,purchasePlan} from './finance.js';
+import {balance,splitInstallments,invoiceDates,invoiceSummary,investmentSummary,addMonths,purchasePlan,dailyOverview} from './finance.js';
+
+test('Visão diária distingue consumo e caixa, incluindo pagamentos e saldo inicial da referência',()=>{
+ const date='2025-10-29';
+ const accounts=[{initialBalance:100000,referenceDate:date,transactions:[
+  {date,type:'INCOME',amount:20000,status:'CONFIRMED'},
+  {date,type:'EXPENSE',amount:5000,status:'CONFIRMED'},
+  {date,type:'INVOICE_PAYMENT',amount:1000,status:'CONFIRMED'},
+  {date,type:'INVESTMENT_IN',amount:2000,status:'CONFIRMED'},
+  {date,type:'EXPENSE',amount:99000,status:'PLANNED'},
+ ]}];
+ const result=dailyOverview(accounts,[{date,amount:30000}],date);
+ assert.deepEqual(result,{date,income:20000,cashExpense:5000,cardExpense:30000,expense:35000,result:-15000,openingBalance:100000,closingBalance:112000,cashChange:12000});
+ const empty=dailyOverview(accounts,[],'2025-10-30');
+ assert.equal(empty.openingBalance,112000);assert.equal(empty.closingBalance,112000);assert.equal(empty.result,0);assert.equal(empty.cashChange,0);
+ const past=dailyOverview(accounts,[],'2025-10-28');assert.equal(past.closingBalance,0);
+ const future=dailyOverview(accounts,[],'2099-01-01');assert.equal(future.cashChange,0);
+});
 test('Saldo inclui só movimentações efetivadas a partir da referência',()=>{assert.equal(balance({initialBalance:10000,referenceDate:'2026-01-01',transactions:[{amount:2000,type:'INCOME',date:'2026-01-01',status:'CONFIRMED'},{amount:500,type:'EXPENSE',date:'2026-01-03',status:'CONFIRMED'},{amount:50000,type:'EXPENSE',date:'2025-12-31',status:'CONFIRMED'},{amount:900,type:'EXPENSE',date:'2026-01-03',status:'PLANNED'},{amount:300,type:'EXPENSE',date:'2027-01-03',status:'CONFIRMED'}]},'2026-01-31'),11500);});
 test('Parcelamento mantém centavos e soma exata',()=>{assert.deepEqual(splitInstallments(10000,3),[3334,3333,3333]);for(let count=1;count<=48;count++){const values=splitInstallments(123456,count);assert.equal(values.reduce((a,b)=>a+b,0),123456);assert.ok(Math.max(...values)-Math.min(...values)<=1);}});
 test('Fechamento inclui próximo ciclo no dia do corte',()=>{assert.deepEqual(invoiceDates('2026-10-24',25,5),{month:'2026-10',closingDate:'2026-10-25',dueDate:'2026-11-05'});assert.deepEqual(invoiceDates('2026-10-25',25,5),{month:'2026-11',closingDate:'2026-11-25',dueDate:'2026-12-05'});assert.equal(invoiceDates('2026-12-26',25,5,1).month,'2027-02');});

@@ -40,3 +40,12 @@
 
 .offline-sync-banner{display:flex;align-items:center;gap:12px;background:#fff3d9;border-bottom:1px solid #e7d4aa;color:#775b22;padding:13px 37px;font-size:11px;line-height:1.7}.offline-sync-banner>svg{flex-shrink:0}.offline-sync-banner>div{display:flex;flex-direction:column;flex:1}.offline-sync-banner strong{font-size:12px}.pending-source{display:block;color:var(--muted);margin-top:5px;font-size:10px}.pending-error{font-size:10px;max-width:250px;line-height:1.6;margin-top:7px;color:#bb6558}.main-content>.panel:has(.pending-source){margin-bottom:24px}
 @media(max-width:600px){.offline-sync-banner{padding:12px 18px;flex-wrap:wrap}.offline-sync-banner>.btn{margin-left:28px}.offline-sync-banner>div{min-width:200px}}
+/* Daily overview shares the same metrics on the dashboard and daily report. */
+.daily-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;margin-bottom:18px}
+.panel>.daily-stats{padding:0 24px;margin-bottom:16px}
+.daily-details{display:flex;flex-wrap:wrap;gap:14px 28px;margin-bottom:24px;color:var(--muted);font-size:12px}
+.panel>.daily-details{padding:0 24px}
+.daily-details>span{display:flex;align-items:center;flex-wrap:wrap;gap:7px}
+.daily-details strong{color:var(--text)}
+@media(max-width:1100px){.daily-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.daily-stats{gap:12px}.daily-stats .stat{padding:16px;min-height:145px}.daily-stats .stat>strong{font-size:22px}.daily-stats .stat-top{font-size:10px}.panel>.daily-stats,.panel>.daily-details{padding-left:16px;padding-right:16px}.daily-details{font-size:11px;gap:12px}}

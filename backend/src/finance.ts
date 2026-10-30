@@ -23,6 +23,17 @@ export function balance(account:{initialBalance:number,referenceDate:string,tran
  if(at<account.referenceDate)return 0;
  return account.initialBalance+account.transactions.filter(t=>t.status==='CONFIRMED'&&t.date>=account.referenceDate&&t.date<=at).reduce((s,t)=>s+signedAmount(t),0);
 }
+export function dailyOverview(accounts:Parameters<typeof balance>[0][],purchases:{date:string,amount:number}[],selected=today()){
+ const at=selected>today()?today():selected;
+ const previous=new Date(Date.parse(`${at}T12:00:00Z`)-86400000).toISOString().slice(0,10);
+ const transactions=accounts.flatMap(a=>a.transactions).filter(t=>t.status==='CONFIRMED'&&t.date===selected&&t.date<=today());
+ const income=transactions.filter(t=>t.type==='INCOME').reduce((s,t)=>s+t.amount,0);
+ const cashExpense=transactions.filter(t=>t.type==='EXPENSE').reduce((s,t)=>s+t.amount,0);
+ const cardExpense=purchases.filter(p=>p.date===selected&&p.date<=today()).reduce((s,p)=>s+p.amount,0);
+ const closingBalance=accounts.reduce((s,a)=>s+balance(a,at),0);
+ const openingBalance=selected>at?closingBalance:accounts.reduce((s,a)=>s+(a.referenceDate===at?a.initialBalance:balance(a,previous)),0);
+ return {date:selected,income,cashExpense,cardExpense,expense:cashExpense+cardExpense,result:income-cashExpense-cardExpense,openingBalance,closingBalance,cashChange:closingBalance-openingBalance};
+}
 export function invoiceSummary(invoice:any,at=today()){
  const total=invoice.installments.reduce((s:number,x:any)=>s+x.amount,0),paid=invoice.payments.reduce((s:number,x:any)=>s+x.amount,0),remaining=total-paid;
  const status=remaining<=0&&total>0?'PAID':at>invoice.dueDate?'OVERDUE':paid>0?'PARTIAL':at>=invoice.closingDate?'CLOSED':'OPEN';
