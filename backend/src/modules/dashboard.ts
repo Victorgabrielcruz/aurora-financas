@@ -2,7 +2,7 @@ import {FastifyInstance} from 'fastify';
 import {itemReport} from '../expense-items.js';
 import {db} from '../db.js';
 import {balance,investmentSummary,invoiceSummary,addMonths,today} from '../finance.js';
-import {month,fail} from '../validation.js';
+import {date,month,fail} from '../validation.js';
 export async function snapshot(tenantId:string,selected:string){
  const [accounts,categories,cards,investments]=await Promise.all([db.account.findMany({where:{tenantId},include:{transactions:{include:{category:true,account:true}}}}),db.category.findMany({where:{tenantId},include:{budgets:true}}),db.creditCard.findMany({where:{tenantId},include:{purchases:{include:{category:true}},invoices:{include:{installments:{include:{purchase:true}},payments:true}}}}),db.investment.findMany({where:{tenantId},include:{operations:true,valuations:true}})]);
  const transactions=accounts.flatMap(a=>a.transactions);const purchases=cards.flatMap(c=>c.purchases);const start=`${selected}-01`,end=addMonths(start,1);const effective=transactions.filter(t=>t.status==='CONFIRMED'&&t.date>=start&&t.date<end&&t.date<=today());const purchased=purchases.filter(p=>p.date>=start&&p.date<end&&p.date<=today());
@@ -16,6 +16,18 @@ export async function snapshot(tenantId:string,selected:string){
  return {month:selected,available,income,expense,result:income-expense,invested,current,owed,wealth:available+current-owed,evolution,expensesByCategory,distribution,invoices:invoices.filter(i=>i.remaining>0).sort((a,b)=>a.dueDate.localeCompare(b.dueDate)),accounts:accounts.map(a=>({...a,balance:balance(a),transactions:undefined})),recent:transactions.filter(t=>t.date>=start&&t.date<end).sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt.getTime()-a.createdAt.getTime()).slice(0,5),cardSpending:cards.map(c=>({name:c.name,color:c.color,amount:c.purchases.filter(p=>p.date>=start&&p.date<end).reduce((s,p)=>s+p.amount,0)})),largest:[...effective.filter(t=>t.type==='EXPENSE'),...purchased].sort((a,b)=>b.amount-a.amount).slice(0,8),fixed,variable:expense-fixed,commitment:income>0?owed/income*100:0,demo:accounts.some(a=>a.demo)||cards.some(c=>c.demo)||investments.some(i=>i.demo)};
 }
 export async function dashboardRoutes(app:FastifyInstance){
+ app.get('/api/reports/daily',async(req)=>{
+  const selected=date.parse((req.query as any).date??today());
+  const dates={equals:selected,lte:today()};
+  const [transactions,purchases]=await Promise.all([
+   db.transaction.findMany({where:{account:{tenantId:req.tenantId},type:{in:['INCOME','EXPENSE']},status:'CONFIRMED',date:dates},select:{id:true,description:true,type:true,amount:true,date:true,items:true,category:{select:{name:true,color:true,icon:true}},account:{select:{name:true}}}}),
+   db.cardPurchase.findMany({where:{card:{tenantId:req.tenantId},date:dates},select:{id:true,description:true,amount:true,date:true,items:true,category:{select:{name:true,color:true,icon:true}},card:{select:{name:true}}}}),
+  ]);
+  const entries=[...transactions,...purchases.map(({card,...p})=>({...p,type:'CREDIT_CARD',account:card}))].sort((a,b)=>b.amount-a.amount||a.description.localeCompare(b.description,'pt-BR'));
+  const income=transactions.filter(t=>t.type==='INCOME').reduce((s,t)=>s+t.amount,0);
+  const expense=transactions.filter(t=>t.type==='EXPENSE').reduce((s,t)=>s+t.amount,0)+purchases.reduce((s,p)=>s+p.amount,0);
+  return {data:{date:selected,income,expense,result:income-expense,entries}};
+ });
  app.get('/api/dashboard',async(req)=>({data:await snapshot(req.tenantId,month.parse((req.query as any).month??today().slice(0,7)))}));
  app.get('/api/reports/items',async(req)=>{
   const q=req.query as any;const from=month.parse(q.from??today().slice(0,7)),to=month.parse(q.to??from);

@@ -39,6 +39,16 @@ test('Composição opcional de despesas e relatório de itens',async t=>{
    assert.deepEqual(report.items.map((i:any)=>[i.amount,i.purchases]),[[8000,2],[5000,2]]);
    assert.equal((await api('GET',`/reports/items?from=${month}&to=${month}`)).total,10000);
   });
+  await t.test('Relatório diário soma receitas e despesas sem duplicar transferências, faturas ou parcelas',async()=>{
+   const report=await api('GET',`/reports/daily?date=${date}`);
+   assert.equal(report.date,date);assert.equal(report.income,1000);assert.equal(report.expense,10000);assert.equal(report.result,-9000);
+   assert.deepEqual(report.entries.map((e:any)=>e.id),[expense.id,income.id]);
+   const past=await api('GET',`/reports/daily?date=${old}`);
+   assert.equal(past.expense,12000);assert.equal(past.entries[0].type,'CREDIT_CARD');assert.equal(past.entries[0].account.name,card.name);
+   assert.equal((await raw('GET','/reports/daily?date=2026-02-30')).statusCode,400);
+   const future=await api('GET','/reports/daily?date=2099-01-01');assert.equal(future.expense,0);assert.deepEqual(future.entries,[]);
+   const originalCookie=cookie;cookie='';assert.equal((await raw('GET',`/reports/daily?date=${date}`)).statusCode,401);cookie=originalCookie;
+  });
   await t.test('Valores inválidos são rejeitados sem alterar a composição e sem incluir receitas',async()=>{
    const count=await db.transaction.count();
    for(const items of [[{name:'Item',amount:20001}],[{name:'',amount:1}],[{name:'Item',amount:0}],[{name:'Item',amount:-1}],[{name:'Item',amount:1.5}],null,'[]']){
@@ -56,6 +66,8 @@ test('Composição opcional de despesas e relatório de itens',async t=>{
   await t.test('Outro usuário não consulta os itens nem altera a composição de despesas alheias',async()=>{
    const originalCookie=cookie;const r=await raw('POST','/auth/register',{name:'Outra pessoa',email:'outros-itens@teste.local',password:'senha-outros-itens-123'});assert.equal(r.statusCode,201);cookie=(r.headers['set-cookie'] as string).split(';')[0];
    assert.equal((await api('GET',range)).total,0);
+   assert.deepEqual((await api('GET',`/reports/daily?date=${date}`)).entries,[]);
+   assert.equal((await api('GET',`/reports/daily?date=${old}`)).expense,0);
    for(const path of [`/transactions/${expense.id}/items`,`/purchases/${purchase.id}/items`])assert.equal((await raw('PATCH',path,{items:[{name:'Invadido',amount:1}]})).statusCode,404);
    cookie=originalCookie;
   });

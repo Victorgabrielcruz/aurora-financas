@@ -56,7 +56,7 @@ npm run test:neon # HTTP real -> Fastify -> Neon; limpa apenas o tenant criado n
 - Categorias/subcategorias: CRUD, cores/ícones e orçamento mensal individual com alerta de limite ultrapassado.
 - Cartões: limite utilizado/disponível, compras parceladas, edição em ciclos abertos, faturas passadas/futuras e pagamentos parciais/integrais com conta de origem.
 - Investimentos: ativos, quantidade opcional, aportes/resgates vinculados a contas, atualização manual de valor, custo proporcional, lucro, rentabilidade, histórico e distribuição por classe.
-- Relatórios: períodos de até cinco anos, receitas/despesas, patrimônio, investimentos, categorias, cartões, maiores despesas, fixas/variáveis e comprometimento da renda com a dívida de cartão.
+- Relatórios: aba diária com seleção de data, receitas, despesas, resultado, lançamentos e exportação JSON; períodos de até cinco anos, patrimônio, investimentos, categorias, cartões, maiores despesas, fixas/variáveis e comprometimento da renda com a dívida de cartão.
 - Configurações: perfil, aparência clara/escura salva no banco, exportação JSON, demonstração removível, instruções de instalação e logout.
 - PWA: manifest, ícones PNG de 192/512 px e maskable, service worker exclusivo para interface estática, aviso offline, telas responsivas, sidebar e navegação inferior.
 
@@ -136,7 +136,7 @@ Sucesso: `{ "data": ... }`. Listagem de transações inclui `meta: { page, limit
 | Compras | `PATCH/DELETE /api/purchases/:id` |
 | Faturas | `GET /api/invoices/:id`, `POST /api/invoices/:id/payments` |
 | Investimentos | `GET/POST /api/investments`, `GET/PATCH/DELETE /api/investments/:id`, `POST /api/investments/:id/operations`, `POST /api/investments/:id/valuations` |
-| Análises | `GET /api/dashboard?month=2026-10`, `GET /api/reports?from=2026-01&to=2026-10` |
+| Análises | `GET /api/dashboard?month=2026-10`, `GET /api/reports?from=2026-01&to=2026-10`, `GET /api/reports/daily?date=2026-10-29` |
 | Dados | `GET /api/export`, `POST/DELETE /api/demo` |
 | Saúde | `GET /api/health` |
 
