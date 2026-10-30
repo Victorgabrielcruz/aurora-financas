@@ -99,6 +99,7 @@ model Transaction {
   amount Int
   type String
   date String
+  referenceMonth String?
   status String @default("CONFIRMED")
   note String @default("")
   fixed Boolean @default(false)

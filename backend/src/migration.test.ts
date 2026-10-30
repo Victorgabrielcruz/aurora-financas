@@ -36,6 +36,9 @@ test('Migração multi-tenant preserva usuários, sessões, saldos e histórico 
   for(const delegate of [client.account,client.category,client.creditCard,client.investment] as any[])assert.equal((await delegate.findMany())[0].tenantId,user.tenantId);
   assert.equal((await client.account.findUniqueOrThrow({where:{id:'legacy-account'}})).initialBalance,100000);
   assert.equal((await client.transaction.findUniqueOrThrow({where:{id:'legacy-expense'}})).amount,10000);
+  assert.equal((await client.transaction.findUniqueOrThrow({where:{id:'legacy-expense'}})).referenceMonth,null);
+  await client.transaction.update({where:{id:'legacy-expense'},data:{referenceMonth:'2026-02'}});
+  assert.equal((await client.transaction.findUniqueOrThrow({where:{id:'legacy-expense'}})).referenceMonth,'2026-02');
   assert.deepEqual((await client.transaction.findUniqueOrThrow({where:{id:'legacy-expense'}})).items,[]);
   await client.transaction.update({where:{id:'legacy-expense'},data:{items:[{name:'Aluguel',amount:10000}]}});
   assert.deepEqual((await client.transaction.findUniqueOrThrow({where:{id:'legacy-expense'}})).items,[{name:'Aluguel',amount:10000}]);

@@ -68,3 +68,16 @@ test('Consulta de transações offline respeita conta, período, busca e pagina�
  const s=setup();await s.client.request('/me');await s.store.cache(ownerKey(user),'/__transactions',{complete:true,rows:[{...body,id:'one'},{...body,id:'two',date:'2026-09-10'},{...body,id:'three',type:'CREDIT_CARD',cardId:'card'}]});s.offline();
  const result=await s.client.request('/transactions?from=2026-10-01&accountId=account&limit=1&page=1','GET',undefined,user.tenantId);assert.equal(result.meta.total,1);assert.equal(result.data[0].id,'one');assert.equal((await s.client.request('/transactions?search=Inexistente','GET',undefined,user.tenantId)).data.length,0);await s.store.close();
 });
+
+test('Consulta offline usa o mês de referência da receita e mantém filtros de recebimento',async()=>{
+ const s=setup();await s.client.request('/me');
+ await s.store.cache(ownerKey(user),'/__transactions',{complete:true,rows:[
+  {...body,id:'salary',type:'INCOME',items:[],referenceMonth:'2026-11'},
+  {...body,id:'legacy',type:'INCOME',items:[]},
+  {...body,id:'expense'},
+ ]});s.offline();
+ assert.deepEqual((await s.client.request('/transactions?month=2026-11','GET',undefined,user.tenantId)).data.map((t:any)=>t.id),['salary']);
+ assert.deepEqual((await s.client.request('/transactions?month=2026-10','GET',undefined,user.tenantId)).data.map((t:any)=>t.id),['legacy','expense']);
+ assert.equal((await s.client.request('/transactions?month=2026-11&from=2026-11-01','GET',undefined,user.tenantId)).data.length,0);
+ await s.store.close();
+});

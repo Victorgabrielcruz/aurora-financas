@@ -1,4 +1,7 @@
 export const today = () => new Date().toISOString().slice(0,10);
+export function transactionMonth(t:{type:string,date:string,referenceMonth?:string|null}){
+ return t.type==='INCOME'&&t.referenceMonth?t.referenceMonth:t.date.slice(0,7);
+}
 export function addMonths(date:string,n:number) {
  const [y,m,d]=date.split('-').map(Number); const end=new Date(Date.UTC(y,m+n,0)).getUTCDate();
  return new Date(Date.UTC(y,m-1+n,Math.min(d,end))).toISOString().slice(0,10);

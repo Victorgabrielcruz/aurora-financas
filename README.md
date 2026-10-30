@@ -53,6 +53,7 @@ npm run test:neon # HTTP real -> Fastify -> Neon; limpa apenas o tenant criado n
 - Dashboard com oito indicadores, filtro mensal, gráficos reais de seis meses, últimas movimentações, contas, faturas, orçamento e investimentos.
 - Contas: cadastro, cores/ícones, edição, arquivo, saldo inicial, transferências e ajustes com motivo no histórico.
 - Transações: receitas/despesas, edição/exclusão, notas, previsto/efetivado, recorrência mensal, pesquisa, filtros por período/valor/conta/categoria e paginação.
+- Receitas: mês de referência no cadastro e na edição. Um salário recebido em outubro pode contar em novembro nos totais, gráficos e relatórios mensais. O saldo da conta e o relatório diário seguem a data do recebimento; receitas antigas usam o mês dessa data até serem editadas. Recorrências avançam o mês de referência a cada ocorrência.
 - Categorias/subcategorias: CRUD, cores/ícones e orçamento mensal individual com alerta de limite ultrapassado.
 - Cartões: limite utilizado/disponível, compras parceladas, edição em ciclos abertos, faturas passadas/futuras e pagamentos parciais/integrais com conta de origem.
 - Investimentos: ativos, quantidade opcional, aportes/resgates vinculados a contas, atualização manual de valor, custo proporcional, lucro, rentabilidade, histórico e distribuição por classe.

@@ -80,7 +80,7 @@ export class OfflineClient{
   if(path.split('?')[0]==='/transactions'){
    const all=await this.local(()=>this.store.cached(owner,'/__transactions'));
    if(all?.data&&all.data.complete!==false){const q=new URLSearchParams(path.split('?')[1]);let rows=all.data.rows as any[];
-    rows=rows.filter(t=>(!q.get('search')||t.description.includes(q.get('search')))&&(!q.get('type')||t.type===q.get('type'))&&(!q.get('accountId')||!t.cardId&&t.accountId===q.get('accountId'))&&(!q.get('categoryId')||t.categoryId===q.get('categoryId'))&&(!q.get('status')||t.status===q.get('status'))&&(!q.get('from')||t.date>=q.get('from')!)&&(!q.get('to')||t.date<=q.get('to')!)&&(!q.has('min')||t.amount>=Number(q.get('min')))&&(!q.has('max')||t.amount<=Number(q.get('max'))));
+    rows=rows.filter(t=>(!q.get('search')||t.description.includes(q.get('search')))&&(!q.get('type')||t.type===q.get('type'))&&(!q.get('accountId')||!t.cardId&&t.accountId===q.get('accountId'))&&(!q.get('categoryId')||t.categoryId===q.get('categoryId'))&&(!q.get('status')||t.status===q.get('status'))&&(!q.get('month')||(t.type==='INCOME'&&t.referenceMonth?t.referenceMonth:t.date.slice(0,7))===q.get('month'))&&(!q.get('from')||t.date>=q.get('from')!)&&(!q.get('to')||t.date<=q.get('to')!)&&(!q.has('min')||t.amount>=Number(q.get('min')))&&(!q.has('max')||t.amount<=Number(q.get('max'))));
     const page=Math.max(1,Number(q.get('page')??1)),limit=Math.min(100,Math.max(1,Number(q.get('limit')??20)));return {data:rows.slice((page-1)*limit,page*limit),meta:{page,limit,total:rows.length}};
    }
   }
