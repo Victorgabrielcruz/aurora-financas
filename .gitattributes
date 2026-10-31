@@ -1,3 +1,4 @@
 * text=auto
 *.sh text eol=lf
 Dockerfile text eol=lf
+artifacts/demo-mobile/Aurora[[:space:]]Finanças[[:space:]]-[[:space:]]Apresentação.mp4 filter=lfs diff=lfs merge=lfs -text
