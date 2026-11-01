@@ -24,6 +24,25 @@ test('Fatura atual mostra parcela e total original de uma compra antiga',()=>{
  const html=render('/faturas/invoice',{...invoice,installments:[{...invoice.installments[0],purchase:{...purchase,installments:[{number:5},{number:6},{number:12}]}}]});
  assert.match(html,/<td>5\/12<\/td>/);assert.match(html,/Saldo em aberto/);
 });
+
+test('Fatura oferece correção e exclusão de compras sem pagamentos',()=>{
+ const html=render('/faturas/invoice',invoice);
+ assert.match(html,/aria-label="Editar Celular"/);assert.match(html,/aria-label="Excluir Celular"/);
+ assert.match(html,/afeta todas as suas parcelas/);
+ assert.doesNotMatch(html,/disabled=""/);
+});
+
+test('Pagamento em outra parcela também bloqueia correção da compra',()=>{
+ const html=render('/faturas/invoice',{...invoice,installments:[{...invoice.installments[0],purchase:{...purchase,editable:false}}]});
+ assert.match(html,/aria-label="Editar Celular" disabled=""/);
+ assert.match(html,/aria-label="Excluir Celular" disabled=""/);
+ assert.match(html,/Compra com pagamento registrado/);
+});
+
+test('Fatura vazia explica o resultado da exclusão',()=>{
+ const html=render('/faturas/invoice',{...invoice,total:0,remaining:0,installments:[]});
+ assert.match(html,/Nenhuma compra nesta fatura/);assert.doesNotMatch(html,/Pagar fatura/);
+});
 test('Fatura paga mostra histórico e não oferece novo pagamento',()=>{
  const html=render('/faturas/invoice',{...invoice,status:'PAID',paid:10000,remaining:0,payments:[{id:'payment',amount:10000,date:'2026-10-29',transaction:{account:{name:'Conta corrente'}}}]});
  assert.match(html,/Conta corrente/);assert.doesNotMatch(html,/Pagar fatura/);
