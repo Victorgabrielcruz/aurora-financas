@@ -207,6 +207,7 @@ model InvestmentOperation {
   type String
   amount Int
   costBasis Int
+  quantity Float?
   position Int
   date String
   createdAt DateTime @default(now())

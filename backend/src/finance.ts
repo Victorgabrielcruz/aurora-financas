@@ -39,11 +39,16 @@ export function invoiceSummary(invoice:any,at=today()){
  const status=remaining<=0&&total>0?'PAID':at>invoice.dueDate?'OVERDUE':paid>0?'PARTIAL':at>=invoice.closingDate?'CLOSED':'OPEN';
  return {...invoice,total,paid,remaining,status};
 }
-export function investmentSummary(investment:any,at=today()){
+export function investmentSummary(investment:any,at=today(),quote?:{rate:number,date:string,source:string,stale:boolean}|null){
  const operations=investment.operations.filter((o:any)=>o.date<=at);
  const invested=operations.reduce((s:number,o:any)=>s+(o.type==='DEPOSIT'?o.costBasis:-o.costBasis),0);
  const valuations=investment.valuations.filter((v:any)=>v.date<=at).sort((a:any,b:any)=>b.date.localeCompare(a.date)||new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime());
  const valuation=valuations[0];
+ if(investment.class==='Dólar'){
+  const quantity=Math.round(operations.reduce((s:number,o:any)=>s+(o.type==='DEPOSIT'?1:-1)*(o.quantity??0),0)*1e8)/1e8;
+  const current=quote?Math.round(quantity*quote.rate*100):invested;
+  return {...investment,quantity,invested,current,profit:quote?current-invested:null,returnPct:quote?(invested>0?(current-invested)/invested*100:0):null,quote:quote??null,quoteUnavailable:!quote,averageRate:quantity>0?invested/100/quantity:0};
+ }
  const current=valuation?valuation.amount+operations.filter((o:any)=>o.position>valuation.operationCount).reduce((s:number,o:any)=>s+(o.type==='DEPOSIT'?o.amount:-o.amount),0):operations.reduce((s:number,o:any)=>s+(o.type==='DEPOSIT'?o.amount:-o.amount),0);
  return {...investment,invested,current,profit:current-invested,returnPct:invested>0?(current-invested)/invested*100:0};
 }
