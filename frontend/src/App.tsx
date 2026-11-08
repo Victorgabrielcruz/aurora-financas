@@ -28,7 +28,7 @@ const InvestmentDetails=lazy(()=>import('./investments').then(m=>({default:m.Inv
 const Categories=lazy(()=>import('./categories-reports').then(m=>({default:m.Categories})));
 const ItemReport=lazy(()=>import('./item-report'));
 const DailyReport=lazy(()=>import('./daily-report'));
-const Reports=lazy(()=>import('./categories-reports').then(m=>({default:m.Reports})));
+const Reports=lazy(()=>import('./reports'));
 const nav=[{path:'/',name:'Visão geral',Icon:LayoutDashboard},{path:'/transacoes',name:'Transações',Icon:ArrowLeftRight},{path:'/contas',name:'Contas',Icon:Wallet},{path:'/cartoes',name:'Cartões de crédito',short:'Cartões',Icon:CreditCard},{path:'/investimentos',name:'Investimentos',Icon:ChartNoAxesCombined},{path:'/categorias',name:'Categorias',Icon:Shapes},{path:'/relatorios',name:'Relatórios',Icon:ChartNoAxesCombined}];
 function Shell({user}:{user:User}){
  const [month,setMonth]=useState(initialMonth),[hidden,setHidden]=useState(false),[form,setForm]=useState<{kind:string,data?:any}|null>(null),[toast,setToast]=useState<{text:string,error?:boolean}|null>(null),[confirmation,setConfirmation]=useState<{title:string,action:()=>Promise<any>}|null>(null),[confirmBusy,setConfirmBusy]=useState(false),[confirmError,setConfirmError]=useState(''),[menu,setMenu]=useState(false),[online,setOnline]=useState(navigator.onLine);const location=useLocation();
